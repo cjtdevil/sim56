@@ -1,6 +1,6 @@
 library(tidyverse);library(ggplot2);library(ggbeeswarm)
 
-set.seed(1995)
+set.seed(1800)
 
 # From Evolving-Hockey 2019-20 RAPMs
 df <- data.frame(
@@ -38,7 +38,7 @@ sim_season = function(n,df){
   
 }
 
-# SIMULATION: Seasons of two lengths
+# SIMULATION: Seasons of two lengths (n=100)
 
 # Simulate 56-game season (Each team/venue pairing 4 times)
 res4 = list()
@@ -62,15 +62,6 @@ res6df = bind_rows(res6)%>%
   mutate(rk = rank(-pts,ties.method = 'random'),
          playoffs = ifelse(rk<5,1,0)) 
 
-# TABLE: Playoff results
-res4df %>%
-  ungroup %>% group_by(team) %>%
-  summarise(playoffs = sum(playoffs))
-
-res6df %>%
-  ungroup %>% group_by(team) %>%
-  summarise(playoffs = sum(playoffs))
-
 # GRAPH: Point totals and playoff results
 res4df %>%
   bind_rows(res6df) %>%
@@ -79,10 +70,77 @@ res4df %>%
   ggplot(aes(x=team,y=pts,color=playoffs)) +
   facet_grid(~gp) +
   geom_beeswarm() +
-  ylab("Points") + xlab("Team") +
+  ylab("PTS%") + xlab("Team") +
   theme(legend.title = element_blank(),
         legend.position=c(.5,.1))
 
+res4df %>%
+  ungroup %>% group_by(team) %>%
+  summarise(playoffs = sum(playoffs)) 
+
+res6df %>%
+  ungroup %>% group_by(team) %>%
+  summarise(playoffs = sum(playoffs))
 
 
+
+
+
+
+
+
+
+
+
+
+# SIMULATION: Seasons of two lengths (n=500)
+#### Increase simulation to 500 trials and focus on Devils
+
+set.seed(666)
+
+res4 = list()
+for(i in 1:500){
+  res4[[i]] = sim_season(4,df) %>%
+    mutate(season_no = i)
+}
+res4df = bind_rows(res4) %>%
+  group_by(season_no) %>%
+  mutate(rk = rank(-pts,ties.method = 'random'),
+         playoffs = ifelse(rk<5,1,0)) 
+
+# Simulate 84-game season (Each team/venue pairing 6 times)
+res6 = list()
+for(i in 1:500){
+  res6[[i]] = sim_season(6,df) %>%
+    mutate(season_no = i)
+}
+res6df = bind_rows(res6)%>%
+  group_by(season_no) %>%
+  mutate(rk = rank(-pts,ties.method = 'random'),
+         playoffs = ifelse(rk<5,1,0))
+
+# GRAPH: Devils-only results
+res4df %>%
+  bind_rows(res6df) %>%
+  filter(team=="NJD") %>%
+  mutate(gp = ifelse(gp==56,"56-game Season","84-game Season"),
+         playoffs = ifelse(playoffs==1,"Made Playoffs","Miss Playoffs")) %>%
+  ggplot(aes(y=pts,x=gp,color=playoffs)) +
+  geom_beeswarm() +
+  ylab("PTS%") + xlab("Team") +
+  theme(legend.title = element_blank(),
+        legend.position=c(.5,.1))
+
+# TABLE: Playoff results
+
+# 56-game Playoff Prob
+res4df %>%
+  ungroup %>% group_by(team) %>%
+  summarise(playoffs = sum(playoffs)) %>%
+  mutate(playoff_perc = playoffs/500)
+# 84-game Playoff Prob
+res6df %>%
+  ungroup %>% group_by(team) %>%
+  summarise(playoffs = sum(playoffs))%>%
+  mutate(playoff_perc = playoffs/500)
 
